@@ -1,0 +1,33 @@
+FROM microsoft/dotnet:2.2-aspnetcore-runtime AS base
+
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
+FROM microsoft/dotnet:2.2-sdk AS build
+
+WORKDIR /src
+COPY ["iot-web-manager.csproj", "iot-web-manager/"]
+RUN dotnet restore "iot-web-manager.csproj"
+COPY . .
+WORKDIR "/src/iot-web-manager"
+RUN dotnet build "iot-web-manager.csproj" -c Release -o /app
+
+FROM build AS publish
+RUN dotnet publish "iot-web-manager.csproj" -c Release -o /app
+
+FROM node as nodebuilder
+RUN mkdir /usr/src/app
+WORKDIR /usr/src/app
+ENV PATH /usr/src/app/node_modules/.bin:$PATH
+COPY iot-web-manager/ClientApp/package.json /usr/src/app/package.json
+RUN npm install
+COPY iot-web-manager/ClientApp/. /usr/src/app
+RUN npm run build
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app .
+RUN mkdir -p /app/ClientApp/dist
+COPY --from=nodebuilder /usr/src/app/dist/. /app/ClientApp/dist/
+ENTRYPOINT ["dotnet", "iot-web-manager.dll"]
