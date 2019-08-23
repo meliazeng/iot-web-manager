@@ -23,4 +23,4 @@ RUN dotnet publish "iot-web-manager.csproj" -c Release -o /app
 FROM base as final
 WORKDIR /app
 COPY --from=publish /app .
-ENTRYPOINT ["dotnet", "iot-web-manager.dll]
+ENTRYPOINT ["dotnet", "iot-web-manager.dll"]
